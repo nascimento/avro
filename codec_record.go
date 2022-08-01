@@ -327,6 +327,7 @@ type recordMapEncoder struct {
 }
 
 func (e *recordMapEncoder) Encode(ptr unsafe.Pointer, w *Writer) {
+	var parsedErrors []error
 	for _, field := range e.fields {
 		valPtr := e.mapType.UnsafeGetIndex(ptr, reflect2.PtrOf(field))
 		if valPtr == nil {
@@ -347,6 +348,13 @@ func (e *recordMapEncoder) Encode(ptr unsafe.Pointer, w *Writer) {
 		}
 
 		field.encoder.Encode(valPtr, w)
+		if w.Error != nil {
+			parsedErrors = append(parsedErrors, fmt.Errorf("%s: %w", field.name, w.Error))
+		}
+		w.Error = nil
+	}
+	if parsedErrors != nil {
+		w.Error = fmt.Errorf("%v", parsedErrors)
 	}
 }
 
